@@ -8,7 +8,7 @@
 !NOTE WELL: the product of these numbers must equal the number of
 !            processors that you run on!
 !--------------
-1 1
+4 2
 !--------------
 !"6" - 6D, "2000" - # of particles for each charge state, "2" - nonlinear
 !Lorentz integrator "1" for map integrator, "0" - no error study, "1" - standard output

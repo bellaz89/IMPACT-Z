@@ -8,7 +8,7 @@
 ! Comments:
 !----------------------------------------------------------------
       module Pgrid2dclass
-        use mpistub
+        ! use mpistub
         type Pgrid2d
           private
           integer comm_2d      ! comunicator for entire grid
