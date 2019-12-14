@@ -20,9 +20,10 @@
 #**************************************************************************
 # Macros defining the Fortran, C/C++ compiler and linker.
 
-CC = mpif90 
-LINK = mpif90
+CC = h5pfc 
+LINK = h5pfc
 FFLAGS = -O3
+LDFLAGS = 
 
 #**************************************************************************
 # List of .o files that EXENAME depends on.  Edit as appropriate for MP.
@@ -53,7 +54,7 @@ EXEOLD = ImpactZexe
 #************************************************************************
 # disable predefined suffixes and define your own set of allowed suffixes
  .SUFFIXES:
- .SUFFIXES: .o .f .F .c .f90 .F90
+ .SUFFIXES: .o .mod .f .F .c .f90 .F90
 
 #*************************************************************************
 # inference rules (how to compile object files that have no explicit rules)
@@ -68,7 +69,7 @@ EXEOLD = ImpactZexe
 # Rules for building EXENAME from OBJS and OBJS from your source.
 
 $(EXEOLD):  $(OBJS) $(OBJS2) 
-	$(LINK) -o $(EXEOLD) $(OBJS2) 
+	$(LINK) -o $(EXEOLD) $(OBJS2) $(LDFLAGS) 
 
 #************************************************************************
 # if you wish to compile a certain object with different flags

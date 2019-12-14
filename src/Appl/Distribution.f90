@@ -10,6 +10,7 @@
 !           x,px,y,py,t,pt,charge/mass,charge weight,id
 !----------------------------------------------------------------
       module Distributionclass
+        use HDF5
         use Pgrid2dclass
         use CompDomclass
         use BeamBunchclass      
@@ -1661,22 +1662,35 @@
 
         end subroutine readElegant_Dist
 
-        subroutine readin_Dist(this)
+        subroutine readin_Dist(this) !corresponds to entry point 19
         implicit none
         include 'mpif.h'
         type (BeamBunch), intent(inout) :: this
         integer :: i,j,jlow,jhigh,avgpts,myid,nproc,ierr,nptot,nleft
+        
+        integer(hsize_t), DIMENSION(2) :: dataDims, maxDims
+        integer(hid_t) :: fileId       !File identifier 
+        integer(hid_t) :: datasetId    !Dataset identifier 
+        integer(hid_t) :: dataspaceId    !Dataspace identifier 
+        integer(hid_t) :: memoryspaceId  !Memoryspace identifier 
+        integer :: error ! error flag
+
         double precision, dimension(9) :: tmptcl
-        double precision :: sum1,sum2,x1,x2
+        double precision :: x1,x2
  
         call MPI_COMM_RANK(MPI_COMM_WORLD,myid,ierr)
         call MPI_COMM_SIZE(MPI_COMM_WORLD,nproc,ierr)
  
+        call h5open_f(error)
+        call h5fopen_f('particle.h5', H5F_ACC_RDONLY_F, fileId, error)
+        call h5dopen_f(fileId, 'particles', datasetId, error)
+        call h5dget_space_f(datasetId, dataspaceId, error)
+        call h5sget_simple_extent_dims_f(dataspaceId, dataDims, maxDims, error)
+
+        print*,'X: ', dataDims(1), ' Y: ', dataDims(2)
+
         open(unit=12,file='particle.in',status='old')
- 
-        sum1 = 0.0
-        sum2 = 0.0
- 
+        
           read(12,*)nptot
           avgpts = nptot/nproc
           nleft = nptot - avgpts*nproc
@@ -1690,25 +1704,24 @@
           endif
           allocate(this%Pts1(9,avgpts))
           this%Pts1 = 0.0
-          !jlow = myid*avgpts + 1
-          !jhigh = (myid+1)*avgpts
-          !print*,"avgpts, jlow, and jhigh: ",avgpts,jlow,jhigh
           do j = 1, nptot
             read(12,*)tmptcl(1:9)
-            sum1 = sum1 + tmptcl(1)
-            sum2 = sum2 + tmptcl(3)
             if( (j.ge.jlow).and.(j.le.jhigh) ) then
               i = j - jlow + 1
               this%Pts1(1:9,i) = tmptcl(1:9)
             endif
-!            if(myid.eq.0) print*,i,sum1,sum2
           enddo
-          !print*,"sumx1,sumy1: ",sum1/nptot,sum2/nptot
  
           close(12)
  
-          this%Nptlocal = avgpts
+        this%Nptlocal = avgpts
  
+        call h5sclose_f(dataspaceId, error)
+        call h5sclose_f(memoryspaceId, error)
+        call h5dclose_f(datasetId, error)
+        call h5fclose_f(fileId, error)
+        call h5close_f(error)
+
         end subroutine readin_Dist
 
         !read particle distribution from ImpactT output
