@@ -1669,6 +1669,10 @@
         integer :: i,j,jlow,jhigh,avgpts,myid,nproc,ierr,nptot,nleft
         
         integer(hsize_t), DIMENSION(2) :: dataDims, maxDims
+        integer(hsize_t), DIMENSION(2) :: count, offset
+        integer(hsize_t), DIMENSION(2) :: stride = (/1, 1/)
+        integer(hsize_t), DIMENSION(2) :: block = (/1, 1/)
+
         integer(hid_t) :: fileId       !File identifier 
         integer(hid_t) :: datasetId    !Dataset identifier 
         integer(hid_t) :: dataspaceId    !Dataspace identifier 
@@ -1685,35 +1689,36 @@
         call h5fopen_f('particle.h5', H5F_ACC_RDONLY_F, fileId, error)
         call h5dopen_f(fileId, 'particles', datasetId, error)
         call h5dget_space_f(datasetId, dataspaceId, error)
-        call h5sget_simple_extent_dims_f(dataspaceId, dataDims, maxDims, error)
+        call h5sget_simple_extent_dims_f(dataspaceId, dataDims, maxDims, &
+                                         error)
 
         print*,'X: ', dataDims(1), ' Y: ', dataDims(2)
 
-        open(unit=12,file='particle.in',status='old')
+        nptot = dataDims(2) ! is this true?
+        avgpts = nptot/nproc
+        nleft = nptot - avgpts*nproc
+        if(myid.lt.nleft) then
+          avgpts = avgpts+1
+          jlow = myid*avgpts + 1
+          jhigh = (myid+1)*avgpts
+        else
+          jlow = myid*avgpts + 1 + nleft
+          jhigh = (myid+1)*avgpts + nleft
+        endif
         
-          read(12,*)nptot
-          avgpts = nptot/nproc
-          nleft = nptot - avgpts*nproc
-          if(myid.lt.nleft) then
-            avgpts = avgpts+1
-            jlow = myid*avgpts + 1
-            jhigh = (myid+1)*avgpts
-          else
-            jlow = myid*avgpts + 1 + nleft
-            jhigh = (myid+1)*avgpts + nleft
-          endif
-          allocate(this%Pts1(9,avgpts))
-          this%Pts1 = 0.0
-          do j = 1, nptot
-            read(12,*)tmptcl(1:9)
-            if( (j.ge.jlow).and.(j.le.jhigh) ) then
-              i = j - jlow + 1
-              this%Pts1(1:9,i) = tmptcl(1:9)
-            endif
-          enddo
- 
-          close(12)
- 
+        allocate(this%Pts1(9,avgpts))
+        this%Pts1 = 0.0 ! is this really necessary??
+
+        count = (/9,avgpts/)
+        offset = (/0,jlow-1/)
+
+        call h5sselect_hyperslab_f(dataspaceId, H5S_SELECT_SET_F, offset, & 
+                                   count, error, stride, block)
+
+        call h5screate_simple_f(2, count, memoryspaceId, error)
+        call h5dread_f(datasetId, H5t_NATIVE_DOUBLE, this%Pts1, count, &
+                        error, memoryspaceId, dataspaceId)
+
         this%Nptlocal = avgpts
  
         call h5sclose_f(dataspaceId, error)
