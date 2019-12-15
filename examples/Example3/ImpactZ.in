@@ -2,7 +2,7 @@
 !"1" # of procs in Y direction, "1" # of procs in Z direction
 !NOTE WELL: the product of these numbers must equal the number of
 !            processors that you run on!
-2 2
+1 1
 !
 !--------------------------------------------------
 !"6" - 6D, "20" - # of particles for each charge state, "2" - nonlinear

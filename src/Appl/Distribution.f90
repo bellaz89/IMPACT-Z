@@ -1684,8 +1684,8 @@
         double precision, dimension(9) :: tmptcl
         double precision :: x1,x2
  
-        call MPI_COMM_RANK(MPI_COMM_WORLD,myid,ierr)
-        call MPI_COMM_SIZE(MPI_COMM_WORLD,nproc,ierr)
+        call MPI_COMM_RANK(MPI_COMM_WORLD,myid,error)
+        call MPI_COMM_SIZE(MPI_COMM_WORLD,nproc,error)
  
         call h5open_f(error)
         call h5pcreate_f(H5P_FILE_ACCESS_F, plistId, error)
@@ -1727,7 +1727,7 @@
                                    count, error, stride, block)
 
         call h5screate_simple_f(2, count, memoryspaceId, error)
-        call h5dread_f(datasetId, H5t_NATIVE_DOUBLE, this%Pts1, count, &
+        call h5dread_f(datasetId, H5T_NATIVE_DOUBLE, this%Pts1, count, &
                         error, memoryspaceId, dataspaceId, plistId2)
 
         this%Nptlocal = avgpts
