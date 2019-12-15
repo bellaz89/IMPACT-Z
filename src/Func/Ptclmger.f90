@@ -93,19 +93,6 @@
 !        call MPI_BARRIER(comm2d,ierr)
 
         tmpctlc = 0.0
-!        do i = 1, Nptlocal
-!          tmpctlc(1) = tmpctlc(1) + abs(Ptsl(1,i))
-!          tmpctlc(2) = tmpctlc(2) + abs(Ptsl(2,i))
-!          tmpctlc(3) = tmpctlc(3) + abs(Ptsl(3,i))
-!          tmpctlc(4) = tmpctlc(4) + abs(Ptsl(4,i))
-!          tmpctlc(5) = tmpctlc(5) + abs(Ptsl(5,i))
-!          tmpctlc(6) = tmpctlc(6) + abs(Ptsl(6,i))
-!        enddo
-!        call MPI_ALLREDUCE(tmpctlc,tmpct,6,MPI_DOUBLE_PRECISION,MPI_SUM, &
-!                           comm2d,ierr)
-!        if(myid.eq.0) then
-!          print*,"before particle move: ",tmpct
-!        endif
 
         flag = 0
         Nptlocal0 = Nptlocal
