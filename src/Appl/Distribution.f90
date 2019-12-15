@@ -1674,6 +1674,8 @@
         integer(hsize_t), DIMENSION(2) :: block = (/1, 1/)
 
         integer(hid_t) :: fileId       !File identifier 
+        integer(hid_t) :: plistId      !property list
+        integer(hid_t) :: plistId2      !property list
         integer(hid_t) :: datasetId    !Dataset identifier 
         integer(hid_t) :: dataspaceId    !Dataspace identifier 
         integer(hid_t) :: memoryspaceId  !Memoryspace identifier 
@@ -1686,7 +1688,15 @@
         call MPI_COMM_SIZE(MPI_COMM_WORLD,nproc,ierr)
  
         call h5open_f(error)
-        call h5fopen_f('particle.h5', H5F_ACC_RDONLY_F, fileId, error)
+        call h5pcreate_f(H5P_FILE_ACCESS_F, plistId, error)
+        call h5pset_fapl_mpio_f(plistId, MPI_COMM_WORLD, MPI_INFO_NULL, &
+                                 error)
+
+        call h5fopen_f('particle.h5', H5F_ACC_RDONLY_F, fileId, error, &
+                       access_prp=plistId)
+
+        call h5pcreate_f(H5P_DATASET_XFER_F, plistId2, error)
+        call h5pset_dxpl_mpio_f(plistId2, H5FD_MPIO_COLLECTIVE_F, error)
         call h5dopen_f(fileId, 'particles', datasetId, error)
         call h5dget_space_f(datasetId, dataspaceId, error)
         call h5sget_simple_extent_dims_f(dataspaceId, dataDims, maxDims, &
@@ -1718,10 +1728,12 @@
 
         call h5screate_simple_f(2, count, memoryspaceId, error)
         call h5dread_f(datasetId, H5t_NATIVE_DOUBLE, this%Pts1, count, &
-                        error, memoryspaceId, dataspaceId)
+                        error, memoryspaceId, dataspaceId, plistId2)
 
         this%Nptlocal = avgpts
- 
+
+        call h5pclose_f(plistId2, error) 
+        call h5pclose_f(plistId, error) 
         call h5sclose_f(dataspaceId, error)
         call h5sclose_f(memoryspaceId, error)
         call h5dclose_f(datasetId, error)
