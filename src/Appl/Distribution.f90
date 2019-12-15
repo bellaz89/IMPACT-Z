@@ -1692,7 +1692,10 @@
         call h5sget_simple_extent_dims_f(dataspaceId, dataDims, maxDims, &
                                          error)
 
-        print*,'X: ', dataDims(1), ' Y: ', dataDims(2)
+        if (dataDims(1).ne.9) then
+            write(6,*) 'The particle dataset width should be 9'
+            stop
+        endif
 
         nptot = dataDims(2) ! is this true?
         avgpts = nptot/nproc
@@ -1700,10 +1703,8 @@
         if(myid.lt.nleft) then
           avgpts = avgpts+1
           jlow = myid*avgpts + 1
-          jhigh = (myid+1)*avgpts
         else
           jlow = myid*avgpts + 1 + nleft
-          jhigh = (myid+1)*avgpts + nleft
         endif
         
         allocate(this%Pts1(9,avgpts))
