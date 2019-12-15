@@ -25,13 +25,13 @@
 !        double precision, dimension(pdim,npmax) :: Ptsl
         double precision, dimension(:),intent(in) :: lcrange
         !integer, parameter :: nptmv = 100000
-        integer, parameter :: nptmv = 3000000
+        integer :: nptmv
 !        integer, parameter :: nptmv = 300000
-        double precision, dimension(9,nptmv) :: left,right,up,down
+        double precision, allocatable, dimension(:,:) :: left,right,up,down
         !integer, parameter :: ntmpstr = 400000
-        integer, parameter :: ntmpstr = 10000000
+        integer :: ntmpstr
 !        integer, parameter :: ntmpstr = 600000
-        double precision, dimension(9,ntmpstr) :: temp1
+        double precision, allocatable, dimension(:,:) :: temp1
         double precision, allocatable, dimension(:,:) :: recv
         integer :: myid,myidx,myidy,totnp,npy,npx, &
                    comm2d,commcol,commrow
@@ -53,6 +53,15 @@
         integer :: totflag
         double precision :: t0
         real*8, dimension(6) :: tmpctlc,tmpct,tmpct2
+
+        nptmv  = 300000000
+        ntmpstr = 10000000
+
+        allocate(left(9, nptmv))
+        allocate(right(9, nptmv))
+        allocate(up(9, nptmv))
+        allocate(down(9,nptmv))
+        allocate(temp1(9, ntmpstr))
 
         call starttime_Timer(t0)
 
@@ -473,6 +482,12 @@
 !        endif
 
         t_ptsmv = t_ptsmv + elapsedtime_Timer(t0)
+
+        deallocate(left)
+        deallocate(right)
+        deallocate(up)
+        deallocate(down)
+        deallocate(temp1)
 
         end subroutine ptsmv2_ptclmger
       end module Ptclmgerclass
