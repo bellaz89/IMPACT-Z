@@ -1775,9 +1775,10 @@
         type (BeamBunch), intent(in) :: this
         integer, intent(in) :: samplePeriod
         character(128) nfileString
-        integer :: processNumber, processRank, dataIdx, dataLength, i
+        integer :: processNumber, processRank, dataIdx, dataLength, i, j
         integer :: rank   
         integer, dimension(:), allocatable :: processesParticleNumber
+        double precision, dimension(:,:), allocatable :: outputData
 
         integer(hsize_t), dimension(2) :: dataDims, maxDims
         integer(hsize_t), dimension(2) :: count, offset
@@ -1800,7 +1801,7 @@
         call MPI_COMM_SIZE(MPI_COMM_WORLD, processNumber, error)
         call MPI_COMM_RANK(MPI_COMM_WORLD, processRank, error)
         allocate(processesParticleNumber(processNumber))
-        call MPI_ALLGATHER(this%Nptlocal, 1, MPI_INTEGER, &
+        call MPI_ALLGATHER(this%Nptlocal/abs(samplePeriod), 1, MPI_INTEGER, &
                            processesParticleNumber, processNumber, &
                            MPI_INTEGER, MPI_COMM_WORLD, error)
 
@@ -1808,33 +1809,55 @@
         dataIdx = 0
 
         do i = 1, processNumber
-            
             if (i.eq.(processRank+1)) then
                 dataIdx = dataLength
             endif
-            dataLength = dataLength + processesParticleNumber(i)
+                dataLength = dataLength + processesParticleNumber(i)
         enddo
 
-        offset = (/0,dataIdx/)
-        dataDims = (/9,this%Nptlocal/)
-        maxDims = (/9,dataLength/)
+        if (samplePeriod.eq.0) then
+            print*, "samplePeriod Shouldn't be equal to zero"
+            stop
+        else if (samplePeriod.gt.0) then
+            offset = (/0,dataIdx/)
+            dataDims = (/9,this%Nptlocal/samplePeriod /)
+            maxDims = (/9,dataLength/)
+            
+            if (samplePeriod.ne.1) then
+            allocate(outputData(9,this%Nptlocal/samplePeriod))    
+                do i = 1, this%Nptlocal/samplePeriod
+                    outputData(:,i) = this%Pts1(:,1+(i-1)*samplePeriod)
+                enddo
+            endif
+        else
+            offset = (/0,dataIdx/)
+            dataDims = (/6,this%Nptlocal/abs(samplePeriod) /)
+            maxDims = (/6,dataLength/)
+            allocate(outputData(6,this%Nptlocal/abs(samplePeriod)))
+            
+            do i = 1, this%Nptlocal/abs(samplePeriod)
+                j = 1 + (i-1)*abs(samplePeriod)
+                outputData(1,j) = this%Pts1(1,j)*Scxl
+                outputData(2,j) = this%Pts1(2,j)
+                outputData(3,j) = this%Pts1(3,j)*Scxl
+                outputData(4,j) = this%Pts1(4,j)
+                outputData(5,j) = -this%Pts1(5,j)*Scxl
+                outputData(6,j) = -this%Pts1(6,j)-this%refptcl(6)
+            enddo
+        endif
 
+    
         call MPI_BARRIER(MPI_COMM_WORLD)
         call h5open_f(error)
         call h5pcreate_f(H5P_FILE_ACCESS_F, plistId, error)
         call h5pset_fapl_mpio_f(plistId, MPI_COMM_WORLD, MPI_INFO_NULL, &
                                  error)
 
-        !call h5fopen_f('particle.h5', H5F_ACC_RDONLY_F, fileId, error, &
-        !               access_prp=plistId)
-        call h5fcreate_f('lol.h5', H5F_ACC_TRUNC_F, fileId, &
-                        error, access_prp=plistId)
-        !call h5fcreate_f(trim(nfileString)//'lol.h5', H5F_ACC_TRUNC_F, fileId, &
-
-
-        !call h5pcreate_f(H5P_DATASET_XFER_F, plistId2, error)
+        call h5fcreate_f(trim(nfileString)//trim('.h5'), H5F_ACC_TRUNC_F, &
+                        fileId, error, access_prp=plistId)
         rank=2
         call h5screate_simple_f(rank, maxDims, filespaceId, error)
+
         call h5dcreate_f(fileId, 'particles', H5T_NATIVE_DOUBLE, &
                          filespaceId, datasetId, error)
 
@@ -1846,9 +1869,15 @@
         call h5pcreate_f(H5P_DATASET_XFER_F, plistId2, error)
         call h5pset_dxpl_mpio_f(plistId2, H5FD_MPIO_COLLECTIVE_F, error)
         
-        call h5dwrite_f(datasetId, H5T_NATIVE_DOUBLE, this%Pts1, &
-                        maxDims, error, memoryspaceId, filespaceId, plistId2)
-                        
+        if (samplePeriod.ne.1) then
+            call h5dwrite_f(datasetId, H5T_NATIVE_DOUBLE, outputData, &
+                            maxDims, error, memoryspaceId, & 
+                            filespaceId, plistId2)
+        else
+            call h5dwrite_f(datasetId, H5T_NATIVE_DOUBLE, this%Pts1, &
+                            maxDims, error, memoryspaceId, & 
+                            filespaceId, plistId2) 
+        endif
 
         call h5pclose_f(plistId2, error) 
         call h5pclose_f(plistId, error) 
@@ -1858,83 +1887,12 @@
         call h5fclose_f(fileId, error)
         call h5close_f(error)
 
-
-        !integer :: np,my_rank,ierr
-        !integer status(MPI_STATUS_SIZE)
-        !integer :: i,j,sixnpt,mnpt
-        !integer, allocatable, dimension(:) :: nptlist
-        !double precision, allocatable,dimension(:,:) :: recvbuf
-
-        !if (samplePeriod .eq. 0) then
-        !   samplePeriod = 1
-        !endif
-
-        !call MPI_COMM_RANK(MPI_COMM_WORLD,my_rank,ierr)
-        !call MPI_COMM_SIZE(MPI_COMM_WORLD,np,ierr)
-        !call MPI_ALLREDUCE(this%Nptlocal,mnpt,1,MPI_INTEGER,MPI_MAX,&
-        !                MPI_COMM_WORLD,ierr)
-
-        !allocate(nptlist(0:np-1))
-        !nptlist = 0
-        !allocate(recvbuf(9,mnpt))
-        !sixnpt = 9*this%Nptlocal
-
-        !call MPI_GATHER(this%Nptlocal,1,MPI_INTEGER,nptlist,1,&
-        !                MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-
-        !nptlist = 9*nptlist
-
-        !if(my_rank.eq.0) then
-        !  open(nfile,status='unknown')
-        !  if(samplePeriod.ge.0) then
-        !   do i = 1, this%Nptlocal,samplePeriod
-        !    write(nfile,100)this%Pts1(1,i),this%Pts1(2,i),this%Pts1(3,i),&
-        !                    this%Pts1(4,i),this%Pts1(5,i),this%Pts1(6,i),&
-        !                    this%Pts1(7,i),this%Pts1(8,i),this%Pts1(9,i)
-        !   enddo
-        !   do i = 1, np-1
-        !    call MPI_RECV(recvbuf(1,1),nptlist(i),MPI_DOUBLE_PRECISION,&
-        !                  i,1,MPI_COMM_WORLD,status,ierr) 
-        !
-        !    do j = 1, nptlist(i)/9,samplePeriod
-        !      write(nfile,100)recvbuf(1,j),recvbuf(2,j),recvbuf(3,j),&
-        !                      recvbuf(4,j),recvbuf(5,j),recvbuf(6,j),&
-        !                      recvbuf(7,j),recvbuf(8,j),recvbuf(9,j)
-        !    enddo
-        !   enddo
-        !  else
-        !   write (*,*) 'dumping phase space Impact-T format'
-        !   do i = 1, this%Nptlocal,abs(samplePeriod)
-        !    write(nfile,101)this%Pts1(1,i)*Scxl,this%Pts1(2,i), &
-        !          this%Pts1(3,i)*Scxl,this%Pts1(4,i), &
-        !         -this%Pts1(5,i)*Scxl,-this%Pts1(6,i)-this%refptcl(6)
-        !   enddo
-        !   do i = 1, np-1
-        !    call MPI_RECV(recvbuf(1,1),nptlist(i),MPI_DOUBLE_PRECISION,&
-        !                  i,1,MPI_COMM_WORLD,status,ierr) 
-        !
-        !    do j = 1, nptlist(i)/9,abs(samplePeriod)
-        !      write(nfile,101)recvbuf(1,j)*Scxl,recvbuf(2,j),&
-        !            recvbuf(3,j)*Scxl,recvbuf(4,j),&
-        !           -recvbuf(5,j)*Scxl,-recvbuf(6,j)-this%refptcl(6)
-        !    enddo
-        !   enddo
-        !  endif
-        !  close(nfile)
-        !else
-        !  call MPI_SEND(this%Pts1(1,1),sixnpt,MPI_DOUBLE_PRECISION,0,1,&
-        !                MPI_COMM_WORLD,ierr)
-        !endif
-
-!100     !format(9(1x,e14.7))
-!101     !format(6(1x,e14.7))
-
-        !deallocate(nptlist)
-        !deallocate(recvbuf)
+        if (samplePeriod.ne.1) then
+            deallocate(outputData)
+        endif
 
         end subroutine phase_Output
 
-        !//output the 3D particle number density
         subroutine dens3d_Output(nstep,nfile,this,totnptcls,xmni,xmxi,ymni,&
           ymxi,zmni,zmxi)
         implicit none
