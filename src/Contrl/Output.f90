@@ -1779,12 +1779,13 @@
         integer :: rank   
         integer, dimension(:), allocatable :: processesParticleNumber
 
-        integer(hsize_t), DIMENSION(2) :: dataDims, maxDims
-        integer(hsize_t), DIMENSION(2) :: count, offset
-        integer(hsize_t), DIMENSION(2) :: stride = (/1, 1/)
-        integer(hsize_t), DIMENSION(2) :: block = (/1, 1/)
+        integer(hsize_t), dimension(2) :: dataDims, maxDims
+        integer(hsize_t), dimension(2) :: count, offset
+        integer(hsize_t), dimension(2) :: stride = (/1, 1/)
+        integer(hsize_t), dimension(2) :: block = (/1, 1/)
 
         integer(hid_t) :: fileId       !File identifier 
+        integer(hid_t) :: filespaceId       !File identifier 
         integer(hid_t) :: plistId      !property list
         integer(hid_t) :: plistId2      !property list
         integer(hid_t) :: datasetId    !Dataset identifier 
@@ -1800,7 +1801,7 @@
         call MPI_COMM_RANK(MPI_COMM_WORLD, processRank, error)
         allocate(processesParticleNumber(processNumber))
         call MPI_ALLGATHER(this%Nptlocal, 1, MPI_INTEGER, &
-                           processParticleNumber, processNumber, &
+                           processesParticleNumber, processNumber, &
                            MPI_INTEGER, MPI_COMM_WORLD, error)
 
         dataLength = 0
@@ -1811,12 +1812,12 @@
             if (i.eq.(processRank+1)) then
                 dataIdx = dataLength
             endif
-            dataLength = dataLength+processesParticleNumber
+            dataLength = dataLength + processesParticleNumber(i)
         enddo
 
-        offset = (/0,dataIdx)/
-        dataDims = (/9,this%Nptlocal)/
-        maxDims = (/9,dataLength)/
+        offset = (/0,dataIdx/)
+        dataDims = (/9,this%Nptlocal/)
+        maxDims = (/9,dataLength/)
 
         call MPI_BARRIER(MPI_COMM_WORLD)
         call h5open_f(error)
@@ -1826,8 +1827,9 @@
 
         !call h5fopen_f('particle.h5', H5F_ACC_RDONLY_F, fileId, error, &
         !               access_prp=plistId)
-        call h5fcreate_f(trim(nfileString)//'.h5', H5F_ACC_TRUNC_F, fileId, &
+        call h5fcreate_f('lol.h5', H5F_ACC_TRUNC_F, fileId, &
                         error, access_prp=plistId)
+        !call h5fcreate_f(trim(nfileString)//'lol.h5', H5F_ACC_TRUNC_F, fileId, &
 
 
         !call h5pcreate_f(H5P_DATASET_XFER_F, plistId2, error)
