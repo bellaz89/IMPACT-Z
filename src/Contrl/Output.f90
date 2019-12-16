@@ -1775,6 +1775,7 @@
         type (BeamBunch), intent(in) :: this
         integer, intent(in) :: samplePeriod
         character(128) nfileString
+        character(128) filename
         integer :: processNumber, processRank, dataIdx, dataLength, i, j
         integer :: rank   
         integer, dimension(:), allocatable :: processesParticleNumber
@@ -1793,9 +1794,7 @@
         integer(hid_t) :: dataspaceId    !Dataspace identifier 
         integer(hid_t) :: memoryspaceId  !Memoryspace identifier 
         integer :: error ! error flag
-
-        write(nfileString, *)nfile
-        
+ 
         call h5open_f(error)
         call MPI_BARRIER(MPI_COMM_WORLD)
         call MPI_COMM_SIZE(MPI_COMM_WORLD, processNumber, error)
@@ -1853,7 +1852,9 @@
         call h5pset_fapl_mpio_f(plistId, MPI_COMM_WORLD, MPI_INFO_NULL, &
                                  error)
 
-        call h5fcreate_f(trim(nfileString)//trim('.h5'), H5F_ACC_TRUNC_F, &
+        write(nfileString, *)nfile
+        filename = trim(nfileString)//trim('.h5')
+        call h5fcreate_f(trim(filename), H5F_ACC_TRUNC_F, &
                         fileId, error, access_prp=plistId)
         rank=2
         call h5screate_simple_f(rank, maxDims, filespaceId, error)
