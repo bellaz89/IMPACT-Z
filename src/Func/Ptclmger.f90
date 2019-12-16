@@ -54,8 +54,8 @@
         double precision :: t0
         real*8, dimension(6) :: tmpctlc,tmpct,tmpct2
 
-        nptmv  = 300000000
-        ntmpstr =300000000
+        nptmv  = 3000000
+        ntmpstr =1000000
 
         allocate(left(9, nptmv))
         allocate(right(9, nptmv))

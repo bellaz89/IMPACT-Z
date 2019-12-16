@@ -124,6 +124,10 @@
         double precision, dimension(25) :: tmpdtl
         integer :: iqr,idr,ibpm,iccl,iccdtl,idtl,isc,icf,islrf,isl,idipole,&
                    iemfld,myrank,imultpole,itws,nfileout
+        integer :: error
+
+        call MPI_INIT(error)
+        call h5open_f(error)
 
         !start up MPI.
         call init_Input(time)
@@ -1350,6 +1354,7 @@
         subroutine destruct_AccSimulator(time)
         implicit none
         include 'mpif.h'
+        integer :: error
         double precision :: time
  
         call destruct_Data()
@@ -1362,6 +1367,10 @@
         deallocate(qmcclist0)
  
         call end_Output(time)
+
+        call h5close_f(error)
+        call MPI_Finalize(error)
+
 
         end subroutine destruct_AccSimulator
 

@@ -1688,7 +1688,6 @@
         call MPI_COMM_RANK(MPI_COMM_WORLD,myid,error)
         call MPI_COMM_SIZE(MPI_COMM_WORLD,nproc,error)
  
-        call h5open_f(error)
         call h5pcreate_f(H5P_FILE_ACCESS_F, plistId, error)
         call h5pset_fapl_mpio_f(plistId, MPI_COMM_WORLD, MPI_INFO_NULL, &
                                  error)
@@ -1733,13 +1732,13 @@
 
         this%Nptlocal = avgpts
 
-        call h5pclose_f(plistId2, error) 
         call h5pclose_f(plistId, error) 
+        call h5pclose_f(plistId2, error) 
         call h5sclose_f(dataspaceId, error)
         call h5sclose_f(memoryspaceId, error)
         call h5dclose_f(datasetId, error)
         call h5fclose_f(fileId, error)
-        call h5close_f(error)
+
 
         end subroutine readin_Dist
 

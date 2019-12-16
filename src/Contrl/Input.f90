@@ -12,6 +12,7 @@
 !----------------------------------------------------------------
       module Inputclass
         ! use mpistub
+        use HDF5
         interface in_Input
           module procedure in1_Input, in2_Input
         end interface
@@ -24,7 +25,6 @@
         integer :: ierr
 
         ! start MPI library.
-        call MPI_INIT(ierr)
         time = MPI_WTIME()
         ! for measurement of memory usage.
         !call system_stats()

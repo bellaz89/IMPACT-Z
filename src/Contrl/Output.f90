@@ -1775,8 +1775,8 @@
         integer, intent(in) :: nfile
         type (BeamBunch), intent(in) :: this
         integer, intent(in) :: samplePeriod
-        character(128) nfileString
-        character(128) filename
+        character(128) :: nfileString
+        character(128) :: filename
         integer :: processNumber, processRank, dataIdx, dataLength, i, j
         integer :: rank   
         integer, dimension(:), allocatable :: processesParticleNumber
@@ -1788,21 +1788,22 @@
         integer(hsize_t), dimension(2) :: block = (/1, 1/)
 
         integer(hid_t) :: fileId       !File identifier 
-        integer(hid_t) :: filespaceId       !File identifier 
         integer(hid_t) :: plistId      !property list
         integer(hid_t) :: plistId2      !property list
         integer(hid_t) :: datasetId    !Dataset identifier 
         integer(hid_t) :: dataspaceId    !Dataspace identifier 
         integer(hid_t) :: memoryspaceId  !Memoryspace identifier 
         integer :: error ! error flag
- 
-        call h5open_f(error)
+
+
         call MPI_BARRIER(MPI_COMM_WORLD)
         call MPI_COMM_SIZE(MPI_COMM_WORLD, processNumber, error)
         call MPI_COMM_RANK(MPI_COMM_WORLD, processRank, error)
+        
         allocate(processesParticleNumber(processNumber))
+        
         call MPI_ALLGATHER(this%Nptlocal/abs(samplePeriod), 1, MPI_INTEGER, &
-                           processesParticleNumber, processNumber, &
+                           processesParticleNumber, 1, &
                            MPI_INTEGER, MPI_COMM_WORLD, error)
 
         dataLength = 0
@@ -1824,9 +1825,11 @@
             maxDims = (/9,dataLength/)
             
             if (samplePeriod.ne.1) then
-            allocate(outputData(9,this%Nptlocal/samplePeriod))    
+                allocate(outputData(9,this%Nptlocal/samplePeriod))    
                 do i = 1, this%Nptlocal/samplePeriod
-                    outputData(:,i) = this%Pts1(:,1+(i-1)*samplePeriod)
+                    do j = 1, 9
+                        outputData(j,i) = this%Pts1(j,1+(i-1)*samplePeriod)
+                    enddo
                 enddo
             endif
         else
@@ -1847,25 +1850,24 @@
         endif
 
     
-        call MPI_BARRIER(MPI_COMM_WORLD)
-        call h5open_f(error)
         call h5pcreate_f(H5P_FILE_ACCESS_F, plistId, error)
         call h5pset_fapl_mpio_f(plistId, MPI_COMM_WORLD, MPI_INFO_NULL, &
                                  error)
 
         write(nfileString, *)nfile
+        nfileString = adjustl(nfileString)
         filename = trim(nfileString)//trim('.h5')
-        call h5fcreate_f(trim(filename), H5F_ACC_TRUNC_F, &
+        call h5fcreate_f(filename, H5F_ACC_TRUNC_F, &
                         fileId, error, access_prp=plistId)
         rank=2
-        call h5screate_simple_f(rank, maxDims, filespaceId, error)
+        call h5screate_simple_f(rank, maxDims, dataspaceId, error)
 
         call h5dcreate_f(fileId, 'particles', H5T_NATIVE_DOUBLE, &
-                         filespaceId, datasetId, error)
+                         dataspaceId, datasetId, error)
 
         call h5screate_simple_f(rank, dataDims, memoryspaceId, error)
-        call h5dget_space_f(datasetId, filespaceId, error)
-        call h5sselect_hyperslab_f(filespaceId, H5S_SELECT_SET_F, &
+        call h5dget_space_f(datasetId, dataspaceId, error)
+        call h5sselect_hyperslab_f(dataspaceId, H5S_SELECT_SET_F, &
                                    offset, dataDims, error)
 
         call h5pcreate_f(H5P_DATASET_XFER_F, plistId2, error)
@@ -1874,24 +1876,25 @@
         if (samplePeriod.ne.1) then
             call h5dwrite_f(datasetId, H5T_NATIVE_DOUBLE, outputData, &
                             maxDims, error, memoryspaceId, & 
-                            filespaceId, plistId2)
+                            dataspaceId, plistId2)
         else
             call h5dwrite_f(datasetId, H5T_NATIVE_DOUBLE, this%Pts1, &
                             maxDims, error, memoryspaceId, & 
-                            filespaceId, plistId2) 
+                            dataspaceId, plistId2) 
         endif
 
         call h5pclose_f(plistId2, error) 
-        call h5pclose_f(plistId, error) 
-        call h5sclose_f(dataspaceId, error)
-        call h5sclose_f(memoryspaceId, error)
         call h5dclose_f(datasetId, error)
+        call h5sclose_f(memoryspaceId, error)
         call h5fclose_f(fileId, error)
-        call h5close_f(error)
+        call h5sclose_f(dataspaceId, error)
+        call h5pclose_f(plistId, error) 
 
         if (samplePeriod.ne.1) then
             deallocate(outputData)
         endif
+
+        deallocate(processesParticleNumber)
 
         end subroutine phase_Output
 
@@ -3031,8 +3034,6 @@
 
         !for measurement of memory
         !call system_stats()
-
-        call MPI_Finalize(ierr)
 
         end subroutine end_Output
 
