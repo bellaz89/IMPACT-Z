@@ -11,6 +11,7 @@
       module Outputclass
 !        use Timer_class
         use HDF5
+        use h5fdmpio
         use BeamBunchclass
         use Pgrid2dclass
         use Fldmgerclass

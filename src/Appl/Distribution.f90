@@ -11,7 +11,7 @@
 !----------------------------------------------------------------
       module Distributionclass
         use HDF5
-        !use h5fdmpio
+        use h5fdmpio
         use Pgrid2dclass
         use CompDomclass
         use BeamBunchclass      
